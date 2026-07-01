@@ -8,3 +8,10 @@
 
 - cond_signal() is used to wake up a waiting thread when a dongle becomes available.
 
+
+
+The Process is the "Container" (Heavy): It is the isolated environment given by the operating system. It owns the memory space, the open files, and the security permissions. If one process crashes, the others keep running fine.
+
+The Thread is the "Worker" (Light): It is the actual sequence of instructions executing inside the process. A process can have many threads, and they all share the same memory. Because they share everything, if one thread does something fatal, the entire process (and all its threads) crashes.
+
+In one sentence: A process is the environment where things happen, and a thread is the thing actually doing the work inside that environment.

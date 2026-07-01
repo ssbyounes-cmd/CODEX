@@ -1,28 +1,4 @@
-#include <pthread.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/time.h>
-
-
-typedef struct dongle {
-    int in_use;
-    int queue[2];
-    int queue_count;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-} dongle;
-
-
-typedef struct thread_data {
-    int thread_id;
-    dongle *dongle1;
-    dongle *dongle2;
-    struct timeval start_time;
-    pthread_mutex_t *print_mutex;
-    int last_compilation_time;
-} thread_data;
-
+#include "codexion.h"
 
 
 
@@ -34,27 +10,39 @@ unsigned long get_time(struct timeval start_time)
     return milliseconds;
 }
 
+int *sort_queue(thread_data coder, dongle *d)
+{
+// queue need an upgrade to store more than just thread id but also last compile time
+}
+
 
 void safe_print(thread_data *data, char *text)
 {
-    pthread_mutex_lock(data->print_mutex);
-    printf(text, get_time(data->start_time), data->thread_id);
-    pthread_mutex_unlock(data->print_mutex);
+    pthread_mutex_lock(&data->sim->print_mutex);
+    printf(text, get_time(data->sim->start_time), data->info->thread_id);
+    pthread_mutex_unlock(&data->sim->print_mutex);
 }
 
-
-void take_dongle(thread_data *coder, dongle *d)
+void add_to_queue(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
-    d->queue[d->queue_count] = coder->thread_id; // add the thread ID to the queue
-    d->queue_count++;
-    while (d->in_use)
-        pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
 
-    d->in_use = 1;
-    d->queue]
+    d->queue[d->queue_count] = *coder->info; // add the thread ID to the queue
+    d->queue_count++;
     pthread_mutex_unlock(&d->mutex);
 }
+
+void wait_dongle(thread_data *coder, dongle *d)
+{
+    pthread_mutex_lock(&d->mutex);
+    while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue  
+        pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
+    d->in_use = 1;
+    d->queue[0] = d->queue[1]; // shift the queue to the left
+    d->queue_count--; // remove the thread ID from the queue
+    pthread_mutex_unlock(&d->mutex);
+}
+
 // coders has two dongles each..  We have to protect taking and releasing otherwise, we'd face data race.
 void release_dongle(dongle *d)
 {
@@ -68,13 +56,13 @@ void *routine(void *coders)
 {
     thread_data *coder = (thread_data *)coders;
     int current_time = 0;
-    int simulation = 2;
     int swap_flag = 0;
+    int compilations = coder->sim->compilations;
 
-    while(simulation)
+    while(compilations)
     {
 
-        if ((coder->thread_id % 2 == 0) && (swap_flag == 0))
+        if ((coder->info->thread_id % 2 == 0) && (swap_flag == 0))
         {
             dongle *temp = coder->dongle1;
             coder->dongle1 = coder->dongle2;
@@ -83,19 +71,24 @@ void *routine(void *coders)
             usleep(100);
         }
 
-        take_dongle(coder, coder->dongle1);
+        add_to_queue(coder, coder->dongle1);
+        add_to_queue(coder, coder->dongle2);
+
+        wait_dongle(coder, coder->dongle1);
         safe_print(coder, "%lu %d has taken a first dongle\n");
-        take_dongle(coder, coder->dongle2);
+        wait_dongle(coder, coder->dongle2);
         safe_print(coder, "%lu %d has taken a second dongle\n");
 
 
-        coder->last_compilation_time = get_time(coder->start_time);
+        coder->info->last_compilation_time = get_time(coder->sim->start_time);
         safe_print(coder, "%lu %d is compiling\n");
-        usleep(100000); // simulate compiling for 100 milliseconds
+        usleep(coder->sim->time_to_compile * 1000); // simulate compiling for 100 milliseconds
         // release dongles after compiling
         release_dongle(coder->dongle1);
         release_dongle(coder->dongle2);
-        simulation--;
+        usleep(1000); // simulate debbuging
+        usleep(1000); // simulate refractoring
+        compilations--;
         // break;
     }
         
@@ -103,55 +96,65 @@ void *routine(void *coders)
 
 int main(int argc, char **argv)
 {
-    int nb_coders = 4;
-    char *scheduler = "fifo";
-    int time_to_burnout = 500;
-    int compilations = 2;
+
+    simulation_data sim_data;
+
+    sim_data.nb_coders = 5;
+    sim_data.scheduler = "fifo";
+    sim_data.time_to_burnout = 500;
+    sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
+    sim_data.compilations = 3;
+    pthread_mutex_init(&sim_data.print_mutex, NULL);
 
 
-    pthread_t th[nb_coders];
+    pthread_t th[sim_data.nb_coders];
     pthread_mutex_t print_mutex;
     int i;
 
     pthread_mutex_init(&print_mutex, NULL);
-    struct timeval start, end;
+    struct timeval start;
     gettimeofday(&start, NULL);
+    sim_data.start_time = start;
     i = 0;
 
 
-    thread_data coders[nb_coders];
+    thread_data coders[sim_data.nb_coders];
 
-    dongle dongle[nb_coders];
+    dongle dongle[sim_data.nb_coders];
 
-    for (i = 0; i < nb_coders; i++){
+    coder_info info[sim_data.nb_coders];
+
+    for (i = 0; i < sim_data.nb_coders; i++){
         pthread_mutex_init(&dongle[i].mutex, NULL);
         dongle[i].in_use = 0;
         dongle[i].queue_count = 0;
         pthread_cond_init(&dongle[i].cond, NULL); //  
+
+        info[i].last_compilation_time = 0;
+        info[i].thread_id = i + 1;
     }
     i = 0;
 
-    while (i < nb_coders)
-    {
 
+    while (i < sim_data.nb_coders)
+    {
         // initialize thread data
-        coders[i].thread_id = i + 1;
+        coders[i].info = &info[i];
         coders[i].dongle1 = &dongle[i];
-        coders[i].dongle2 = &dongle[(i + 1) % nb_coders];
-        coders[i].start_time = start;
-        coders[i].print_mutex = &print_mutex;
+        coders[i].dongle2 = &dongle[(i + 1) % sim_data.nb_coders];
+        coders[i].sim = &sim_data;
 
         pthread_create(&th[i], NULL, &routine, &coders[i]);
         i++;
     }
     i = 0;
-    while (i < nb_coders)
+    while (i < sim_data.nb_coders)
     {
         pthread_join(th[i], NULL);
         i++;
     }
 
-    for (i = 0; i < nb_coders; i++) {
+    for (i = 0; i < sim_data.nb_coders; i++) {
         pthread_mutex_destroy(&dongle[i].mutex);
         pthread_cond_destroy(&dongle[i].cond);
     }
