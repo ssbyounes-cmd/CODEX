@@ -10,11 +10,6 @@ unsigned long get_time(struct timeval start_time)
     return milliseconds;
 }
 
-int *sort_queue(thread_data coder, dongle *d)
-{
-// queue need an upgrade to store more than just thread id but also last compile time
-}
-
 
 void safe_print(thread_data *data, char *text)
 {
@@ -25,10 +20,33 @@ void safe_print(thread_data *data, char *text)
 
 void add_to_queue(thread_data *coder, dongle *d)
 {
+    unsigned long deadline1;
+    unsigned long deadline2;
+    coder_info temp;
+
     pthread_mutex_lock(&d->mutex);
 
     d->queue[d->queue_count] = *coder->info; // add the thread ID to the queue
     d->queue_count++;
+    if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "edf") == 0)
+    {
+        deadline1 = coder->sim->time_to_burnout + d->queue[0].last_compilation_time;
+        deadline2 = coder->sim->time_to_burnout + d->queue[1].last_compilation_time;
+        if (deadline2 < deadline1)
+        {
+            // printf("ba33bouoo\n");
+            temp = d->queue[0];
+            d->queue[0] = d->queue[1];
+            d->queue[1] = temp;
+        }
+        else if (deadline2 == deadline1)
+            if (d->queue[1].thread_id < d->queue[0].thread_id)
+            {
+                temp = d->queue[0];
+                d->queue[0] = d->queue[1];
+                d->queue[1] = temp;
+            }
+    }
     pthread_mutex_unlock(&d->mutex);
 }
 
@@ -100,7 +118,7 @@ int main(int argc, char **argv)
     simulation_data sim_data;
 
     sim_data.nb_coders = 5;
-    sim_data.scheduler = "fifo";
+    sim_data.scheduler = "edf";
     sim_data.time_to_burnout = 500;
     sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
     sim_data.compilations = 3;
