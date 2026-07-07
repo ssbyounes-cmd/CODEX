@@ -28,7 +28,7 @@ void add_to_queue(thread_data *coder, dongle *d)
 
     d->queue[d->queue_count] = *coder->info; // add the thread ID to the queue
     d->queue_count++;
-    if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "edf") == 0)
+    if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "fifo") == 0)
     {
         deadline1 = coder->sim->time_to_burnout + d->queue[0].last_compilation_time;
         deadline2 = coder->sim->time_to_burnout + d->queue[1].last_compilation_time;
@@ -53,6 +53,7 @@ void add_to_queue(thread_data *coder, dongle *d)
 void wait_dongle(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
+
     while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue  
         pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
     d->in_use = 1;
@@ -79,7 +80,6 @@ void *routine(void *coders)
 
     while(compilations)
     {
-
         if ((coder->info->thread_id % 2 == 0) && (swap_flag == 0))
         {
             dongle *temp = coder->dongle1;
@@ -90,7 +90,9 @@ void *routine(void *coders)
         }
 
         add_to_queue(coder, coder->dongle1);
+        // simulate some work before trying to acquire the second dongle
         add_to_queue(coder, coder->dongle2);
+
 
         wait_dongle(coder, coder->dongle1);
         safe_print(coder, "%lu %d has taken a first dongle\n");
@@ -117,19 +119,17 @@ int main(int argc, char **argv)
 
     simulation_data sim_data;
 
-    sim_data.nb_coders = 5;
-    sim_data.scheduler = "edf";
+    sim_data.nb_coders = 3;
+    sim_data.scheduler = "fifo";
     sim_data.time_to_burnout = 500;
     sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
-    sim_data.compilations = 3;
+    sim_data.compilations = 1;
     pthread_mutex_init(&sim_data.print_mutex, NULL);
 
 
     pthread_t th[sim_data.nb_coders];
-    pthread_mutex_t print_mutex;
     int i;
 
-    pthread_mutex_init(&print_mutex, NULL);
     struct timeval start;
     gettimeofday(&start, NULL);
     sim_data.start_time = start;
