@@ -16,6 +16,7 @@ typedef struct simulation_data {
     unsigned long time_to_burnout;
     unsigned long time_to_compile;
     unsigned long compilations;
+    unsigned long dongle_cooldown;
     struct timeval start_time;
     pthread_mutex_t print_mutex;
 } simulation_data;
@@ -31,6 +32,7 @@ typedef struct dongle {
     int in_use;
     coder_info queue[2];
     int queue_count;
+    unsigned long last_used_time;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 } dongle;

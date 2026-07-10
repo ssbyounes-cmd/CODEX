@@ -28,7 +28,7 @@ void add_to_queue(thread_data *coder, dongle *d)
 
     d->queue[d->queue_count] = *coder->info; // add the thread ID to the queue
     d->queue_count++;
-    if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "fifo") == 0)
+    if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "edf") == 0)
     {
         deadline1 = coder->sim->time_to_burnout + d->queue[0].last_compilation_time;
         deadline2 = coder->sim->time_to_burnout + d->queue[1].last_compilation_time;
@@ -56,6 +56,26 @@ void wait_dongle(thread_data *coder, dongle *d)
 
     while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue  
         pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
+
+
+
+    // 2. It is our turn! But we must drop the clipboard to check the heat.
+    if (d->last_used_time != 0)
+    {
+        pthread_mutex_unlock(&d->mutex);
+        unsigned long current_time = get_time(coder->sim->start_time);
+        long time_since_release = current_time - d->last_used_time;
+        long time_to_wait = coder->sim->dongle_cooldown - time_since_release;
+        if (time_to_wait > 0)
+        {
+            usleep(time_to_wait * 1000);
+        }
+        // 5. Cooldown is over. Grab the clipboard one last time to claim it.
+        pthread_mutex_lock(&d->mutex);
+    }
+
+
+
     d->in_use = 1;
     d->queue[0] = d->queue[1]; // shift the queue to the left
     d->queue_count--; // remove the thread ID from the queue
@@ -63,10 +83,11 @@ void wait_dongle(thread_data *coder, dongle *d)
 }
 
 // coders has two dongles each..  We have to protect taking and releasing otherwise, we'd face data race.
-void release_dongle(dongle *d)
+void release_dongle(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
     d->in_use = 0;
+    d->last_used_time = get_time(coder->sim->start_time);
     pthread_cond_broadcast(&d->cond); // signal the waiting thread that the dongle is now available
     pthread_mutex_unlock(&d->mutex);
 }
@@ -104,8 +125,8 @@ void *routine(void *coders)
         safe_print(coder, "%lu %d is compiling\n");
         usleep(coder->sim->time_to_compile * 1000); // simulate compiling for 100 milliseconds
         // release dongles after compiling
-        release_dongle(coder->dongle1);
-        release_dongle(coder->dongle2);
+        release_dongle(coder, coder->dongle1);
+        release_dongle(coder, coder->dongle2);
         usleep(1000); // simulate debbuging
         usleep(1000); // simulate refractoring
         compilations--;
@@ -124,6 +145,7 @@ int main(int argc, char **argv)
     sim_data.time_to_burnout = 500;
     sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
     sim_data.compilations = 1;
+    sim_data.dongle_cooldown = 600; // simulate dongle cooldown for 1000 milliseconds
     pthread_mutex_init(&sim_data.print_mutex, NULL);
 
 
@@ -135,7 +157,6 @@ int main(int argc, char **argv)
     sim_data.start_time = start;
     i = 0;
 
-
     thread_data coders[sim_data.nb_coders];
 
     dongle dongle[sim_data.nb_coders];
@@ -146,6 +167,7 @@ int main(int argc, char **argv)
         pthread_mutex_init(&dongle[i].mutex, NULL);
         dongle[i].in_use = 0;
         dongle[i].queue_count = 0;
+        dongle[i].last_used_time = 0;
         pthread_cond_init(&dongle[i].cond, NULL); //  
 
         info[i].last_compilation_time = 0;
