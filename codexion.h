@@ -19,12 +19,15 @@ typedef struct simulation_data {
     unsigned long dongle_cooldown;
     struct timeval start_time;
     pthread_mutex_t print_mutex;
+    pthread_mutex_t stop_mutex;
+    int stop;
 } simulation_data;
 
 
 typedef struct coder_info {
     int last_compilation_time;
     int thread_id;
+    int compile_count;
 } coder_info;
 
 
@@ -46,6 +49,15 @@ typedef struct thread_data {
 
     simulation_data *sim;
 } thread_data;
+
+
+
+int check_isover(thread_data *coder);
+unsigned long get_time(struct timeval start_time);
+void safe_print(thread_data *data, char *text);
+
+void safe_sleep(thread_data *coder, unsigned long ms);
+void swap(coder_info *a, coder_info *b);
 
 
 #endif

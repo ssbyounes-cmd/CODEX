@@ -1,23 +1,6 @@
 #include "codexion.h"
 
 
-
-unsigned long get_time(struct timeval start_time)
-{
-    struct timeval current_time;
-    gettimeofday(&current_time, NULL);
-    unsigned long milliseconds = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec) / 1000;
-    return milliseconds;
-}
-
-
-void safe_print(thread_data *data, char *text)
-{
-    pthread_mutex_lock(&data->sim->print_mutex);
-    printf(text, get_time(data->sim->start_time), data->info->thread_id);
-    pthread_mutex_unlock(&data->sim->print_mutex);
-}
-
 void add_to_queue(thread_data *coder, dongle *d)
 {
     unsigned long deadline1;
@@ -33,19 +16,19 @@ void add_to_queue(thread_data *coder, dongle *d)
         deadline1 = coder->sim->time_to_burnout + d->queue[0].last_compilation_time;
         deadline2 = coder->sim->time_to_burnout + d->queue[1].last_compilation_time;
         if (deadline2 < deadline1)
-        {
-            // printf("ba33bouoo\n");
-            temp = d->queue[0];
-            d->queue[0] = d->queue[1];
-            d->queue[1] = temp;
-        }
+            swap(&d->queue[0], &d->queue[1]);
         else if (deadline2 == deadline1)
-            if (d->queue[1].thread_id < d->queue[0].thread_id)
+        {
+            // Tie breakers
+            if (d->queue[1].compile_count < d->queue[0].compile_count)
+                swap(&d->queue[0], &d->queue[1]);
+            else if (d->queue[1].compile_count > d->queue[0].compile_count)
             {
-                temp = d->queue[0];
-                d->queue[0] = d->queue[1];
-                d->queue[1] = temp;
+                // do nothing
             }
+            else if (d->queue[1].thread_id < d->queue[0].thread_id)
+                swap(&d->queue[0], &d->queue[1]);
+        }
     }
     pthread_mutex_unlock(&d->mutex);
 }
@@ -68,7 +51,7 @@ void wait_dongle(thread_data *coder, dongle *d)
         long time_to_wait = coder->sim->dongle_cooldown - time_since_release;
         if (time_to_wait > 0)
         {
-            usleep(time_to_wait * 1000);
+            safe_sleep(coder, time_to_wait);
         }
         // 5. Cooldown is over. Grab the clipboard one last time to claim it.
         pthread_mutex_lock(&d->mutex);
@@ -123,12 +106,17 @@ void *routine(void *coders)
 
         coder->info->last_compilation_time = get_time(coder->sim->start_time);
         safe_print(coder, "%lu %d is compiling\n");
-        usleep(coder->sim->time_to_compile * 1000); // simulate compiling for 100 milliseconds
+        // usleep(coder->sim->time_to_compile * 1000); // simulate compiling for 100 milliseconds
+        safe_sleep(coder, coder->sim->time_to_compile);
+        coder->info->compile_count++;
         // release dongles after compiling
         release_dongle(coder, coder->dongle1);
         release_dongle(coder, coder->dongle2);
-        usleep(1000); // simulate debbuging
-        usleep(1000); // simulate refractoring
+        // usleep(1000); // simulate debbuging
+        safe_sleep(coder, 1);
+        // usleep(1000); // simulate refractoring
+        safe_sleep(coder, 1);
+
         compilations--;
         // break;
     }
@@ -140,13 +128,15 @@ int main(int argc, char **argv)
 
     simulation_data sim_data;
 
-    sim_data.nb_coders = 3;
-    sim_data.scheduler = "fifo";
+    sim_data.nb_coders = 5;
+    sim_data.scheduler = "edf";
     sim_data.time_to_burnout = 500;
     sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
-    sim_data.compilations = 1;
-    sim_data.dongle_cooldown = 600; // simulate dongle cooldown for 1000 milliseconds
+    sim_data.compilations = 3;
+    sim_data.dongle_cooldown = 0; // simulate dongle cooldown for 1000 milliseconds
+    sim_data.stop = 0;
     pthread_mutex_init(&sim_data.print_mutex, NULL);
+    pthread_mutex_init(&sim_data.stop_mutex, NULL);
 
 
     pthread_t th[sim_data.nb_coders];
@@ -172,6 +162,7 @@ int main(int argc, char **argv)
 
         info[i].last_compilation_time = 0;
         info[i].thread_id = i + 1;
+        info[i].compile_count = 0;
     }
     i = 0;
 
