@@ -56,7 +56,7 @@ int check_isover(thread_data *coder);
 unsigned long get_time(struct timeval start_time);
 void safe_print(thread_data *data, char *text);
 
-void safe_sleep(thread_data *coder, unsigned long ms);
+int safe_sleep(thread_data *coder, unsigned long ms);
 void swap(coder_info *a, coder_info *b);
 
 

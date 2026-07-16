@@ -40,7 +40,7 @@ void safe_print(thread_data *data, char *text)
 }
 
 
-void safe_sleep(thread_data *coder, unsigned long ms)
+int safe_sleep(thread_data *coder, unsigned long ms)
 {
     unsigned long start;
 
@@ -52,4 +52,5 @@ void safe_sleep(thread_data *coder, unsigned long ms)
             break ;
         usleep(500);
     }
+    return check_isover(coder);
 }

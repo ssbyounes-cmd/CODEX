@@ -2,11 +2,44 @@
 
 2. We stagger the thread start times (delaying even coders slightly at T=0ms) to guarantee maximum table throughput and prevent the 'roadblock effect'.
 
-3. take_dongle() and release_dongle() are two protected operations that ensure that only one thread can take or release a dongle at a time, preventing race conditions
+3. take_dongle() and release_dongle() are two protected operations that ensure that only one thread (out of the two that shares the dongle) can take or release a dongle at a time, preventing race conditions
 
 - cond_wait() is used to block one thread while another thread is using a dongle, ensuring that threads wait their turn to access shared resources.
 
-- cond_signal() is used to wake up a waiting thread when a dongle becomes available.
+4. Print and Stop have both their own mutexes to ensure that the output is not garbled and that the program can be stopped safely without leaving threads in an inconsistent state.
+
+5. safe_sleep() was preferred over usleep() because it allows the thread to be interrupted if the program is stopped, preventing the program from hanging indefinitely.
+
+6. Schedulers edf and fifo are implemented to allow the user to choose between two different scheduling algorithms for the threads, providing flexibility in how the program manages thread execution.
+
+- They were implemented using a priority queue to manage the order of thread execution based on their deadlines or arrival times.
+
+- A coder must register first in both queues of his left and right dongle before he can be scheduled to run. This ensures that the scheduler has all the necessary information to make informed decisions about thread execution order.
+
+
+
+
+TBC: -Not sure if stationary/fixed variable at simulation need also a mutex to protext from reading..
+
+-Last update was turning safe_sleep and wait dongle returning functions so they
+can stop all threads from continuing the simulation
+
+-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

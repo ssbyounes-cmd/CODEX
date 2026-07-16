@@ -22,27 +22,31 @@ void add_to_queue(thread_data *coder, dongle *d)
             // Tie breakers
             if (d->queue[1].compile_count < d->queue[0].compile_count)
                 swap(&d->queue[0], &d->queue[1]);
-            else if (d->queue[1].compile_count > d->queue[0].compile_count)
-            {
-                // do nothing
-            }
-            else if (d->queue[1].thread_id < d->queue[0].thread_id)
-                swap(&d->queue[0], &d->queue[1]);
+            else if (d->queue[1].compile_count == d->queue[0].compile_count)
+                if (d->queue[1].thread_id < d->queue[0].thread_id)
+                    swap(&d->queue[0], &d->queue[1]);
         }
     }
     pthread_mutex_unlock(&d->mutex);
 }
 
-void wait_dongle(thread_data *coder, dongle *d)
+int wait_dongle(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
 
-    while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue  
+    while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue
+    {
         pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
+        if (check_isover(coder))
+        {
+            pthread_mutex_unlock(&d->mutex);
+            return 0;
+        }
+    }
 
 
 
-    // 2. It is our turn! But we must drop the clipboard to check the heat.
+    // dongle cooldown
     if (d->last_used_time != 0)
     {
         pthread_mutex_unlock(&d->mutex);
@@ -50,9 +54,8 @@ void wait_dongle(thread_data *coder, dongle *d)
         long time_since_release = current_time - d->last_used_time;
         long time_to_wait = coder->sim->dongle_cooldown - time_since_release;
         if (time_to_wait > 0)
-        {
-            safe_sleep(coder, time_to_wait);
-        }
+            if (!safe_sleep(coder, time_to_wait))
+                return 0;
         // 5. Cooldown is over. Grab the clipboard one last time to claim it.
         pthread_mutex_lock(&d->mutex);
     }
@@ -63,6 +66,7 @@ void wait_dongle(thread_data *coder, dongle *d)
     d->queue[0] = d->queue[1]; // shift the queue to the left
     d->queue_count--; // remove the thread ID from the queue
     pthread_mutex_unlock(&d->mutex);
+    return 1;
 }
 
 // coders has two dongles each..  We have to protect taking and releasing otherwise, we'd face data race.
@@ -98,24 +102,29 @@ void *routine(void *coders)
         add_to_queue(coder, coder->dongle2);
 
 
-        wait_dongle(coder, coder->dongle1);
-        safe_print(coder, "%lu %d has taken a first dongle\n");
-        wait_dongle(coder, coder->dongle2);
-        safe_print(coder, "%lu %d has taken a second dongle\n");
+        if (!wait_dongle(coder, coder->dongle1))
+            return NULL;    
+        safe_print(coder, "%lu %d has taken dongle\n");
+
+        if (!wait_dongle(coder, coder->dongle2))
+            return NULL;
+        safe_print(coder, "%lu %d has taken dongle\n");
 
 
         coder->info->last_compilation_time = get_time(coder->sim->start_time);
         safe_print(coder, "%lu %d is compiling\n");
-        // usleep(coder->sim->time_to_compile * 1000); // simulate compiling for 100 milliseconds
-        safe_sleep(coder, coder->sim->time_to_compile);
+        if (!safe_sleep(coder, coder->sim->time_to_compile))
+            return NULL;
         coder->info->compile_count++;
         // release dongles after compiling
         release_dongle(coder, coder->dongle1);
         release_dongle(coder, coder->dongle2);
-        // usleep(1000); // simulate debbuging
-        safe_sleep(coder, 1);
-        // usleep(1000); // simulate refractoring
-        safe_sleep(coder, 1);
+
+        // debugging and refractoring
+        if (!safe_sleep(coder, 1))
+            return NULL;
+        if (!safe_sleep(coder, 1))
+            return NULL;
 
         compilations--;
         // break;
@@ -134,7 +143,7 @@ int main(int argc, char **argv)
     sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
     sim_data.compilations = 3;
     sim_data.dongle_cooldown = 0; // simulate dongle cooldown for 1000 milliseconds
-    sim_data.stop = 0;
+    sim_data.stop = 1;
     pthread_mutex_init(&sim_data.print_mutex, NULL);
     pthread_mutex_init(&sim_data.stop_mutex, NULL);
 
