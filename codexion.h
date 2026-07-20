@@ -15,19 +15,21 @@ typedef struct simulation_data {
     char *scheduler;
     unsigned long time_to_burnout;
     unsigned long time_to_compile;
+    unsigned long time_to_debug;
+    unsigned long time_to_refactor;
     unsigned long compilations;
     unsigned long dongle_cooldown;
     struct timeval start_time;
     pthread_mutex_t print_mutex;
     pthread_mutex_t stop_mutex;
-    int stop;
+    int sim_status;
 } simulation_data;
 
 
 typedef struct coder_info {
-    int last_compilation_time;
+    unsigned long last_compilation_time;
     int thread_id;
-    int compile_count;
+    unsigned long compile_count;
 } coder_info;
 
 
@@ -48,16 +50,20 @@ typedef struct thread_data {
     coder_info *info;
 
     simulation_data *sim;
+    pthread_mutex_t state_mutex;
 } thread_data;
 
 
 
-int check_isover(thread_data *coder);
+int sim_status(thread_data *coder);
 unsigned long get_time(struct timeval start_time);
 void safe_print(thread_data *data, char *text);
 
 int safe_sleep(thread_data *coder, unsigned long ms);
 void swap(coder_info *a, coder_info *b);
+
+void *monitor(void *arg);
+void wake_all(thread_data *coders, unsigned long nb_coders);
 
 
 #endif

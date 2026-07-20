@@ -17,14 +17,15 @@
 - A coder must register first in both queues of his left and right dongle before he can be scheduled to run. This ensures that the scheduler has all the necessary information to make informed decisions about thread execution order.
 
 
+7. Coder_info (lastcompilationtime, compile_count) need their own state_mutex since the monitor 
+needs to access both in order to detect burn outs or terminate simulation in case all coders compiled.
 
-
-TBC: -Not sure if stationary/fixed variable at simulation need also a mutex to protext from reading..
+TBC: -
 
 -Last update was turning safe_sleep and wait dongle returning functions so they
 can stop all threads from continuing the simulation
 
--
+
 
 
 
