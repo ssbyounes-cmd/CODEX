@@ -20,6 +20,9 @@
 7. Coder_info (lastcompilationtime, compile_count) need their own state_mutex since the monitor 
 needs to access both in order to detect burn outs or terminate simulation in case all coders compiled.
 
+8. The MOnitor keeps looping every 1ms on all coders since the start of the simulation
+to terminate simulation thorugh either victory (if all coders compiled compile amount if times) or if a coder burned out.
+
 TBC: -
 
 -Last update was turning safe_sleep and wait dongle returning functions so they

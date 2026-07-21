@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <string.h>
+#include <stdlib.h>
 
 
 
@@ -54,16 +55,20 @@ typedef struct thread_data {
 } thread_data;
 
 
-
+// helpers
 int sim_status(thread_data *coder);
 unsigned long get_time(struct timeval start_time);
 void safe_print(thread_data *data, char *text);
-
 int safe_sleep(thread_data *coder, unsigned long ms);
 void swap(coder_info *a, coder_info *b);
 
+void *routine(void *coders);
 void *monitor(void *arg);
 void wake_all(thread_data *coders, unsigned long nb_coders);
+
+int wait_dongle(thread_data *coder, dongle *dongle);
+void release_dongle(thread_data *coder, dongle *dongle);
+void add_to_queue(thread_data *coder, dongle *dongle);
 
 
 #endif
