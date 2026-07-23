@@ -10,21 +10,23 @@ int main(int argc, char **argv)
 
     simulation_data sim_data;
 
-    sim_data.nb_coders = 4;
-    sim_data.scheduler = "edf";
-    sim_data.time_to_burnout = 211;
-    sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
-    sim_data.time_to_debug = 1; // simulate debugging for 100 milliseconds
-    sim_data.time_to_refactor = 1; // simulate refactoring for 100 milliseconds
-    sim_data.compilations = 10;
-    sim_data.dongle_cooldown = 10; // simulate dongle cooldown for 1000 milliseconds
-    sim_data.sim_status = 1;
-    pthread_mutex_init(&sim_data.print_mutex, NULL);
-    pthread_mutex_init(&sim_data.stop_mutex, NULL);
+    if (parse_argument(argc, argv, &sim_data) == 0)
+        return (1);
+    // sim_data.nb_coders = 5;
+    // sim_data.time_to_burnout = 301;
+    // sim_data.time_to_compile = 100; // simulate compiling for 100 milliseconds
+    // sim_data.time_to_debug = 1; // simulate debugging for 100 milliseconds
+    // sim_data.time_to_refactor = 1; // simulate refactoring for 100 milliseconds
+    // sim_data.compilations = 10;
+    // sim_data.dongle_cooldown = 0; // simulate dongle cooldown for 1000 milliseconds
+    // sim_data.scheduler = "fifo";
+    // sim_data.sim_status = 1;
+    // pthread_mutex_init(&sim_data.print_mutex, NULL);
+    // pthread_mutex_init(&sim_data.stop_mutex, NULL);
 
 
     pthread_t *th = malloc(sizeof(pthread_t) * sim_data.nb_coders);
-    unsigned long i;
+    long i;
 
     struct timeval start;
     gettimeofday(&start, NULL);

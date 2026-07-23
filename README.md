@@ -23,7 +23,14 @@ needs to access both in order to detect burn outs or terminate simulation in cas
 8. The MOnitor keeps looping every 1ms on all coders since the start of the simulation
 to terminate simulation thorugh either victory (if all coders compiled compile amount if times) or if a coder burned out.
 
-TBC: -
+
+
+
+
+
+
+TBC: - Parsing handling atoi_safe...
+- Also check for hard edge cases between your cdx and others
 
 -Last update was turning safe_sleep and wait dongle returning functions so they
 can stop all threads from continuing the simulation

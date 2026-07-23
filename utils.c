@@ -22,11 +22,13 @@ int sim_status(thread_data *coder)
 }
 
 
-unsigned long get_time(struct timeval start_time)
+long get_time(struct timeval start_time)
 {
+    long milliseconds;
     struct timeval current_time;
+
     gettimeofday(&current_time, NULL);
-    unsigned long milliseconds = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec) / 1000;
+    milliseconds = (current_time.tv_sec - start_time.tv_sec) * 1000 + (current_time.tv_usec - start_time.tv_usec) / 1000;
     return milliseconds;
 }
 
@@ -40,9 +42,9 @@ void safe_print(thread_data *data, char *text)
 }
 
 
-int safe_sleep(thread_data *coder, unsigned long ms)
+int safe_sleep(thread_data *coder, long ms)
 {
-    unsigned long start;
+    long start;
 
     start = get_time(coder->sim->start_time);
     while (sim_status(coder))

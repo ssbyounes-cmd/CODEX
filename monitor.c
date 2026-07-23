@@ -1,9 +1,9 @@
 #include "codexion.h"
 
 
-void wake_all(thread_data *coders, unsigned long nb_coders)
+void wake_all(thread_data *coders, long nb_coders)
 {
-    unsigned long i;
+    long i;
 
     i = 0;
     while (i < nb_coders)
@@ -20,7 +20,7 @@ void wake_all(thread_data *coders, unsigned long nb_coders)
 }
 
 
-int victory_check(thread_data *coders, simulation_data *sim, unsigned long finished_coders, int i)
+int victory_check(thread_data *coders, simulation_data *sim, long finished_coders, int i)
 {
     pthread_mutex_lock(&coders[i].state_mutex);
     if (coders[i].info->compile_count >= sim->compilations)
@@ -40,7 +40,7 @@ int victory_check(thread_data *coders, simulation_data *sim, unsigned long finis
 
 int death_check(thread_data *coders, simulation_data *sim, int i)
 {
-    unsigned long c_time;
+    long c_time;
     
     c_time = get_time(sim->start_time);
     pthread_mutex_lock(&coders[i].state_mutex);
@@ -64,8 +64,8 @@ void *monitor(void *arg)
 {
     thread_data *coders;
     simulation_data *sim;
-    unsigned long i;
-    unsigned long finished_coders;
+    long i;
+    long finished_coders;
 
     coders = (thread_data *) arg;
     sim = coders[0].sim;

@@ -12,14 +12,14 @@
 
 
 typedef struct simulation_data {
-    unsigned long nb_coders;
+    long nb_coders;
     char *scheduler;
-    unsigned long time_to_burnout;
-    unsigned long time_to_compile;
-    unsigned long time_to_debug;
-    unsigned long time_to_refactor;
-    unsigned long compilations;
-    unsigned long dongle_cooldown;
+    long time_to_burnout;
+    long time_to_compile;
+    long time_to_debug;
+    long time_to_refactor;
+    long compilations;
+    long dongle_cooldown;
     struct timeval start_time;
     pthread_mutex_t print_mutex;
     pthread_mutex_t stop_mutex;
@@ -28,9 +28,9 @@ typedef struct simulation_data {
 
 
 typedef struct coder_info {
-    unsigned long last_compilation_time;
-    int thread_id;
-    unsigned long compile_count;
+    long last_compilation_time;
+    long thread_id;
+    long compile_count;
 } coder_info;
 
 
@@ -38,7 +38,7 @@ typedef struct dongle {
     int in_use;
     coder_info queue[2];
     int queue_count;
-    unsigned long last_used_time;
+    long last_used_time;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 } dongle;
@@ -57,18 +57,20 @@ typedef struct thread_data {
 
 // helpers
 int sim_status(thread_data *coder);
-unsigned long get_time(struct timeval start_time);
+long get_time(struct timeval start_time);
 void safe_print(thread_data *data, char *text);
-int safe_sleep(thread_data *coder, unsigned long ms);
+int safe_sleep(thread_data *coder, long ms);
 void swap(coder_info *a, coder_info *b);
 
 void *routine(void *coders);
 void *monitor(void *arg);
-void wake_all(thread_data *coders, unsigned long nb_coders);
+void wake_all(thread_data *coders, long nb_coders);
 
 int wait_dongle(thread_data *coder, dongle *dongle);
 void release_dongle(thread_data *coder, dongle *dongle);
 void add_to_queue(thread_data *coder, dongle *dongle);
+
+int parse_argument(int argc, char **argv, simulation_data *sim_data);
 
 
 #endif

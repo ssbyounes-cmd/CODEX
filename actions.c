@@ -3,9 +3,9 @@
 
 int dongle_cooldown(thread_data *coder, dongle *d)
 {
-    unsigned long current_time;
-    unsigned long time_since_release;
-    unsigned long time_to_wait;
+    long current_time;
+    long time_since_release;
+    long time_to_wait;
 
 
     pthread_mutex_unlock(&d->mutex);
@@ -15,7 +15,6 @@ int dongle_cooldown(thread_data *coder, dongle *d)
     if (time_to_wait > 0)
         if (!safe_sleep(coder, time_to_wait))
             return 0;
-    // 5. Cooldown is over. Grab the clipboard one last time to claim it.
     pthread_mutex_lock(&d->mutex);
     return 1;
 }
@@ -24,9 +23,9 @@ int wait_dongle(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
 
-    while (d->in_use || coder->info->thread_id != d->queue[0].thread_id) // check if the dongle is in use or if the thread is not at the front of the queue
+    while (d->in_use || coder->info->thread_id != d->queue[0].thread_id)
     {
-        pthread_cond_wait(&d->cond, &d->mutex); // release the mutex and wait for the condition variable to be signaled
+        pthread_cond_wait(&d->cond, &d->mutex);
         if (!sim_status(coder))
         {
             pthread_mutex_unlock(&d->mutex);
@@ -40,19 +39,19 @@ int wait_dongle(thread_data *coder, dongle *d)
             return 0;
 
     d->in_use = 1;
-    d->queue[0] = d->queue[1]; // shift the queue to the left
-    d->queue_count--; // remove the thread ID from the queue
+    d->queue[0] = d->queue[1];
+    d->queue_count--;
     pthread_mutex_unlock(&d->mutex);
     return 1;
 }
 
-// coders has two dongles each..  We have to protect taking and releasing otherwise, we'd face data race.
+
 void release_dongle(thread_data *coder, dongle *d)
 {
     pthread_mutex_lock(&d->mutex);
     d->in_use = 0;
     d->last_used_time = get_time(coder->sim->start_time);
-    pthread_cond_broadcast(&d->cond); // signal the waiting thread that the dongle is now available
+    pthread_cond_broadcast(&d->cond);
     pthread_mutex_unlock(&d->mutex);
 }
 
@@ -60,11 +59,11 @@ void release_dongle(thread_data *coder, dongle *d)
 
 void add_to_queue(thread_data *coder, dongle *d)
 {
-    unsigned long deadline1;
-    unsigned long deadline2;
+    long deadline1;
+    long deadline2;
 
     pthread_mutex_lock(&d->mutex);
-    d->queue[d->queue_count] = *coder->info; // add the thread ID to the queue
+    d->queue[d->queue_count] = *coder->info;
     d->queue_count++;
     if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "edf") == 0)
     {
