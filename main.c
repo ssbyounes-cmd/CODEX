@@ -9,6 +9,10 @@ int main(int argc, char **argv)
     (void)argv;
 
     simulation_data sim_data;
+    thread_data *coders;
+    dongle *dongles;
+    coder_info *info;
+    pthread_t *th;
 
     if (parse_argument(argc, argv, &sim_data) == 0)
         return (1);
@@ -25,20 +29,27 @@ int main(int argc, char **argv)
     // pthread_mutex_init(&sim_data.stop_mutex, NULL);
 
 
-    pthread_t *th = malloc(sizeof(pthread_t) * sim_data.nb_coders);
-    long i;
+    // if (init_simulation(&sim_data, &coders, &dongles, &info, &th) == 0)
+    //     return (1);
+    
+    th = malloc(sizeof(pthread_t) * sim_data.nb_coders);
+    
+    coders = malloc(sizeof(thread_data) * sim_data.nb_coders);
+
+    dongles = malloc(sizeof(dongle) * sim_data.nb_coders);
+
+    info = malloc(sizeof(coder_info) * sim_data.nb_coders);
 
     struct timeval start;
     gettimeofday(&start, NULL);
     sim_data.start_time = start;
+    
+
+
+
+
+    long i;
     i = 0;
-
-    thread_data *coders = malloc(sizeof(thread_data) * sim_data.nb_coders);
-
-    dongle *dongles = malloc(sizeof(dongle) * sim_data.nb_coders);
-
-    coder_info *info = malloc(sizeof(coder_info) * sim_data.nb_coders);
-
     while (i < sim_data.nb_coders)
     {
         pthread_mutex_init(&dongles[i].mutex, NULL);
