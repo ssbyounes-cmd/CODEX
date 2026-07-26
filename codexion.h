@@ -55,22 +55,38 @@ typedef struct thread_data {
 } thread_data;
 
 
-// helpers
+typedef struct data_alloc {
+    pthread_t *th;
+    thread_data *coders;
+    dongle *dongles;
+    coder_info *info;
+} data_alloc;
+
+
+/* parsing */
+int parse_argument(int argc, char **argv, simulation_data *sim_data);
+
+/* initialization */
+int init_simulation(simulation_data *sim_data, data_alloc *all_data);
+int start_simulation(simulation_data *sim_data, data_alloc *all_data);
+
+/* simulation */
+void *routine(void *coders);
+int wait_dongle(thread_data *coder, dongle *dongle);
+void release_dongle(thread_data *coder, dongle *dongle);
+void add_to_queue(thread_data *coder, dongle *dongle);
+
+/* cleanup */
+void cleanup_simulation(simulation_data *sim_data, data_alloc *all_data);
+
+/* monitor */
+void *monitor(void *arg);
+
+/* helpers */
 int sim_status(thread_data *coder);
 long get_time(struct timeval start_time);
 void safe_print(thread_data *data, char *text);
 int safe_sleep(thread_data *coder, long ms);
 void swap(coder_info *a, coder_info *b);
-
-void *routine(void *coders);
-void *monitor(void *arg);
-void wake_all(thread_data *coders, long nb_coders);
-
-int wait_dongle(thread_data *coder, dongle *dongle);
-void release_dongle(thread_data *coder, dongle *dongle);
-void add_to_queue(thread_data *coder, dongle *dongle);
-
-int parse_argument(int argc, char **argv, simulation_data *sim_data);
-
 
 #endif

@@ -1,7 +1,7 @@
 #include "codexion.h"
 
 
-void wake_all(thread_data *coders, long nb_coders)
+static void wake_all(thread_data *coders, long nb_coders)
 {
     long i;
 
@@ -20,7 +20,7 @@ void wake_all(thread_data *coders, long nb_coders)
 }
 
 
-int victory_check(thread_data *coders, simulation_data *sim, long finished_coders, int i)
+static int victory_check(thread_data *coders, simulation_data *sim, long finished_coders, int i)
 {
     pthread_mutex_lock(&coders[i].state_mutex);
     if (coders[i].info->compile_count >= sim->compilations)
@@ -38,7 +38,7 @@ int victory_check(thread_data *coders, simulation_data *sim, long finished_coder
 }
 
 
-int death_check(thread_data *coders, simulation_data *sim, int i)
+static int death_check(thread_data *coders, simulation_data *sim, int i)
 {
     long c_time;
     

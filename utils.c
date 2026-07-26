@@ -49,7 +49,6 @@ int safe_sleep(thread_data *coder, long ms)
     start = get_time(coder->sim->start_time);
     while (sim_status(coder))
     {
-        // printf("%lu _ %lu = %lu\n", get_time(coder->sim->start_time), start, ms);
         if (get_time(coder->sim->start_time) - start >= ms)
             break ;
         usleep(500);

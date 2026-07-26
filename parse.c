@@ -29,7 +29,7 @@ static int atoi_safe(char *arg, long *result)
     return 1;
 }
 
-void fill_data(simulation_data *sim_data, long *parsed)
+static void fill_data(simulation_data *sim_data, long *parsed)
 {
     sim_data->nb_coders = parsed[0];
     sim_data->time_to_burnout = parsed[1];
@@ -39,11 +39,9 @@ void fill_data(simulation_data *sim_data, long *parsed)
     sim_data->compilations = parsed[5];
     sim_data->dongle_cooldown = parsed[6];
     sim_data->sim_status = 1;
-    pthread_mutex_init(&sim_data->print_mutex, NULL);
-    pthread_mutex_init(&sim_data->stop_mutex, NULL);
 }
 
-int check_times(simulation_data *sim_data)
+static int check_times(simulation_data *sim_data)
 {
     if (sim_data->time_to_burnout <= 0)
     {
@@ -69,7 +67,7 @@ int check_times(simulation_data *sim_data)
 }
 
 
-int check_argument(simulation_data *sim_data)
+static int check_argument(simulation_data *sim_data)
 {
     if (sim_data->nb_coders <= 0)
     {
