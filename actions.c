@@ -33,7 +33,6 @@ int wait_dongle(thread_data *coder, dongle *d)
         }
     }
 
-    // dongle cooldown
     if (d->last_used_time != 0)
         if (!dongle_cooldown(coder, d))
             return 0;
@@ -73,7 +72,6 @@ void add_to_queue(thread_data *coder, dongle *d)
             swap(&d->queue[0], &d->queue[1]);
         else if (deadline2 == deadline1)
         {
-            // Tie breakers
             if (d->queue[1].compile_count < d->queue[0].compile_count)
                 swap(&d->queue[0], &d->queue[1]);
             else if (d->queue[1].compile_count == d->queue[0].compile_count)

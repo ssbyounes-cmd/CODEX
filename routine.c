@@ -18,10 +18,10 @@ static int take_dongles(thread_data *coder)
     if (!wait_dongle(coder, coder->dongle1))
         return 0;
 
+    safe_print(coder, "%lu %d has taken a dongle\n");
     if (!wait_dongle(coder, coder->dongle2))
         return 0;
 
-    safe_print(coder, "%lu %d has taken a dongle\n");
     safe_print(coder, "%lu %d has taken a dongle\n");
     return 1;
 }

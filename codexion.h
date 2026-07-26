@@ -23,6 +23,8 @@ typedef struct simulation_data {
     struct timeval start_time;
     pthread_mutex_t print_mutex;
     pthread_mutex_t stop_mutex;
+    int print_ready;
+    int stop_ready;
     int sim_status;
 } simulation_data;
 
@@ -41,6 +43,8 @@ typedef struct dongle {
     long last_used_time;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
+    int mutex_ready;
+    int cond_ready;
 } dongle;
 
 
@@ -52,6 +56,7 @@ typedef struct thread_data {
 
     simulation_data *sim;
     pthread_mutex_t state_mutex;
+    int mutex_ready;
 } thread_data;
 
 
