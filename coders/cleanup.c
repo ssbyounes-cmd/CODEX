@@ -1,0 +1,50 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   cleanup.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ychoucho <ychoucho@student.1337.ma>        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/07/27 20:05:30 by ychoucho          #+#    #+#             */
+/*   Updated: 2026/07/27 21:36:08 by ychoucho         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static void	clean_allocation(t_data_alloc *all_data)
+{
+	if (all_data->coders)
+		free(all_data->coders);
+	if (all_data->dongles)
+		free(all_data->dongles);
+	if (all_data->info)
+		free(all_data->info);
+	if (all_data->th)
+		free(all_data->th);
+}
+
+void	cleanup_simulation(t_simulation_data *sim_data, t_data_alloc *all_data)
+{
+	int	i;
+
+	i = 0;
+	if (all_data->dongles && all_data->coders && all_data->info && all_data->th)
+	{
+		while (i < sim_data->nb_coders)
+		{
+			if (all_data->dongles[i].mutex_ready)
+				pthread_mutex_destroy(&all_data->dongles[i].mutex);
+			if (all_data->dongles[i].cond_ready)
+				pthread_cond_destroy(&all_data->dongles[i].cond);
+			if (all_data->coders[i].mutex_ready)
+				pthread_mutex_destroy(&all_data->coders[i].state_mutex);
+			i++;
+		}
+	}
+	if (sim_data->print_ready)
+		pthread_mutex_destroy(&sim_data->print_mutex);
+	if (sim_data->stop_ready)
+		pthread_mutex_destroy(&sim_data->stop_mutex);
+	clean_allocation(all_data);
+}
