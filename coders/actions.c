@@ -15,40 +15,50 @@
 int	dongle_cooldown(t_thread_data *coder, t_dongle *d)
 {
 	long	current_time;
-	long	time_since_release;
 	long	time_to_wait;
 
-	pthread_mutex_unlock(&d->mutex);
+	if (d->last_used_time == 0)
+		return 2;
 	current_time = get_time(coder->sim->start_time);
-	time_since_release = current_time - d->last_used_time;
-	time_to_wait = coder->sim->dongle_cooldown - time_since_release;
+	time_to_wait = coder->sim->dongle_cooldown - (current_time - d->last_used_time);
 	if (time_to_wait > 0)
+	{
+		pthread_mutex_unlock(&d->mutex);
 		if (!safe_sleep(coder, time_to_wait))
 			return (0);
-	pthread_mutex_lock(&d->mutex);
-	return (1);
+		pthread_mutex_lock(&d->mutex);
+		return 1;
+	}
+	return (2);
 }
 
-int	wait_dongle(t_thread_data *coder, t_dongle *d)
+int wait_dongle(t_thread_data *coder, t_dongle *d)
 {
-	pthread_mutex_lock(&d->mutex);
-	while (d->in_use || coder->info->thread_id != d->queue[0].thread_id)
-	{
-		pthread_cond_wait(&d->cond, &d->mutex);
-		if (!sim_status(coder))
-		{
-			pthread_mutex_unlock(&d->mutex);
+	int cooldown;
+
+    pthread_mutex_lock(&d->mutex);
+    while (1)
+    {
+        while (d->in_use || coder->info->thread_id != d->queue[0].thread_id)
+        {
+            pthread_cond_wait(&d->cond, &d->mutex);
+            if (!sim_status(coder))
+            {
+                pthread_mutex_unlock(&d->mutex);
+                return (0);
+            }
+        }
+		cooldown = dongle_cooldown(coder, d);
+        if (cooldown == 0)
 			return (0);
-		}
+		if (cooldown == 2)
+        	break;
 	}
-	if (d->last_used_time != 0)
-		if (!dongle_cooldown(coder, d))
-			return (0);
-	d->in_use = 1;
-	d->queue[0] = d->queue[1];
-	d->queue_count--;
-	pthread_mutex_unlock(&d->mutex);
-	return (1);
+    d->in_use = 1;
+    d->queue[0] = d->queue[1];
+    d->queue_count--;
+    pthread_mutex_unlock(&d->mutex);
+    return (1);
 }
 
 void	release_dongle(t_thread_data *coder, t_dongle *d)
@@ -85,9 +95,9 @@ void	add_to_queue(t_thread_data *coder, t_dongle *d)
 					swap(&d->queue[0], &d->queue[1]);
 		}
 	}
-	if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "fifo") == 0)
-	{
-		swap(&d->queue[0], &d->queue[1]);
-	}
+	// if (d->queue_count == 2 && strcmp(coder->sim->scheduler, "fifo") == 0)
+	// {
+	// 	swap(&d->queue[0], &d->queue[1]);
+	// }
 	pthread_mutex_unlock(&d->mutex);
 }
